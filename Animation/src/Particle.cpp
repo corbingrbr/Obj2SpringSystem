@@ -3,6 +3,7 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <stdlib.h>
 
 #include "Particle.h"
 #include "Shape.h"
@@ -34,17 +35,17 @@ Particle::Particle(const shared_ptr<Shape> s) :
     
 }
 
-Particle::Particle(const shared_ptr<Shape> s, Vector3d x0) :
-	r(1.0),
-	m(1.0),
+Particle::Particle(const shared_ptr<Shape> s, double r, Vector3d x0) :
+	m(.05),
 	i(-1),
 	v(0.0, 0.0, 0.0),
-	fixed(true),
+	fixed(false),
 	sphere(s)
 {
+    this->r = r;
     this->x0 = x0;
     this->x = x0;
-    this->v0 << 0.0 , 0.0, 0.0;
+    this->v << 0.0, 0.0, 0.0;
 }
 
 
@@ -61,12 +62,13 @@ void Particle::tare()
 void Particle::reset()
 {
 	x = x0;
-	v = v0;
+	v << 0.0, 0.0, 0.0;
 }
 
 void Particle::draw(shared_ptr<MatrixStack> MV, const shared_ptr<Program> prog) const
 {
 	if(sphere) {
+
 		MV->pushMatrix();
 		MV->translate(Eigen::Vector3f(x(0), x(1), x(2)));
 		MV->scale(r);
@@ -76,3 +78,33 @@ void Particle::draw(shared_ptr<MatrixStack> MV, const shared_ptr<Program> prog) 
 	}
 }
 
+void Particle::colliding(shared_ptr<Particle> p) 
+{
+    if (!fixed && (x - p->x).norm() <= r + p->r) {
+        
+        Vector3d v1, v2, v1x, v1y, v2x, v2y, dx; 
+        float m1, m2, d1, d2;
+        
+        dx = x - p->x;
+        dx.normalize();
+        
+        //x = dx * p->r;
+
+        v1 = v;
+        
+        d1 = dx.dot(v1);
+        v1x = dx * d1;
+        v1y = v1 - v1x;
+        m1 = m;
+        
+        dx = dx*-1;
+        v2 = p->v;
+        d2 = dx.dot(v2);
+        v2x = dx * d2;
+        v2y = v2 - v2x;
+        m2 = p->m;
+        
+        v = v1x*(m1-m2)/(m1+m2) + v2x*(2*m2)/(m1+m2) + v1y;    
+        
+    }
+}

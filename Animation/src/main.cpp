@@ -26,7 +26,7 @@ using namespace Eigen;
 
 bool keyToggles[256] = {false}; // only for English keyboards!
 
-bool drawSprings = false;
+bool drawSprngs = false; // Whether to draw system springs
 
 GLFWwindow *window; // Main application window
 string RESOURCE_DIR = ""; // Where the resources are loaded from
@@ -52,15 +52,15 @@ static void char_callback(GLFWwindow *window, unsigned int key)
 {
 	keyToggles[key] = !keyToggles[key];
 	switch(key) {
-		case 'h':
-			scene->step();
-			break;
-		case 'r':
-			scene->reset();
-break;
-case 's': 
-drawSprings = !drawSprings;
-break;
+    case 'h':
+        scene->step();
+        break;
+    case 'r':
+        scene->reset();
+        break;
+    case 's': 
+        drawSprngs = !drawSprngs;
+        break;
 	}
 }
 
@@ -205,20 +205,21 @@ void render()
 	glVertex3f(x0, 0.0f, z1);
 	glEnd();
 	
-    if( !keyToggles['s'] ) {
+    if (drawSprngs) {
+        // Draw spring system
+        scene->drawSprings(MV,prog);
         progSimple->unbind();
-        
-        // Draw scene
-        prog->bind();
-        glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, P->topMatrix().data());
-        MV->pushMatrix();
-        scene->draw(MV, prog);
-        MV->popMatrix();
-        prog->unbind();
-    } else {
-        scene->draw(MV, prog);
-        progSimple->unbind(); 
     }
+
+    progSimple->unbind();
+    
+    // Draw scene
+    prog->bind();
+    glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, P->topMatrix().data());
+    MV->pushMatrix();
+    scene->draw(MV, prog);
+    MV->popMatrix();
+    prog->unbind();
         
 	//////////////////////////////////////////////////////
 	// Cleanup
@@ -234,6 +235,7 @@ void stepperFunc()
 {
 	while(true) {
 		if(keyToggles[(unsigned)' ']) {
+            scene->collisionDetection();
 			scene->step();
 		}
 		this_thread::sleep_for(chrono::microseconds(1));

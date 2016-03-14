@@ -20,7 +20,7 @@ class ObjSprSys
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	
-        ObjSprSys(std::string fileName, Eigen::Vector3d begPos, double mass, 
+        ObjSprSys(std::string fileName, Eigen::Vector3d begPos, double scale, double mass, 
                   double stiffness, const Eigen::Vector2d &damping,
                   std::shared_ptr<Shape> sphere);
 	virtual ~ObjSprSys();
@@ -32,8 +32,13 @@ public:
 	void reset();
 	void step(double h, const Eigen::Vector3d &grav);
 	
-	void draw(std::shared_ptr<MatrixStack> MV, std::shared_ptr<Program> p) const;
-	
+	void drawParticles(std::shared_ptr<MatrixStack> MV, std::shared_ptr<Program> p) const;
+    void drawSprings();
+
+    Eigen::Vector3d getPos();
+    double getRadius();
+    void colliding(std::shared_ptr<Particle> p);
+
 private:
     
     int gRef(int x, int y, int z);
@@ -48,8 +53,10 @@ private:
 
 
 	int n;
+    double scale;
     double mass;
     double stiffness;
+    Eigen::Vector3d pos;
     std::string fileName;
     Eigen::Vector3d begPos;
 	Eigen::Vector2d damping;

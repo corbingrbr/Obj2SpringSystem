@@ -19,11 +19,13 @@ public:
 	
 	Particle();
 	Particle(const std::shared_ptr<Shape> shape);
-    Particle(const std::shared_ptr<Shape> shape, Eigen::Vector3d x0);
+    Particle(const std::shared_ptr<Shape> shape, double r, Eigen::Vector3d x0);
 	virtual ~Particle();
 	void tare();
 	void reset();
 	void draw(std::shared_ptr<MatrixStack> MV, const std::shared_ptr<Program> p) const;
+
+    void colliding(std::shared_ptr<Particle> p);
 	
 	double r; // radius
 	double m; // mass

@@ -18,8 +18,6 @@
 using namespace std;
 using namespace Eigen;
 
-extern bool drawSprings;
-
 shared_ptr<Spring> createSpring(const shared_ptr<Particle> p0, const shared_ptr<Particle> p1, double E)
 {
     auto s = make_shared<Spring>(p0, p1);
@@ -31,7 +29,7 @@ shared_ptr<Spring> createSpring(const shared_ptr<Particle> p0, const shared_ptr<
 	return s;
 }
 
-ObjSprSys::ObjSprSys(string fileName, Vector3d begPos, double mass, 
+ObjSprSys::ObjSprSys(string fileName, Vector3d begPos, double scale, double mass, 
                      double stiffness, const Vector2d &damping,
                      shared_ptr<Shape> sphere)
 {
@@ -39,8 +37,10 @@ ObjSprSys::ObjSprSys(string fileName, Vector3d begPos, double mass,
 	assert(stiffness > 0.0);
 	
     this->fileName = fileName;
+    this->pos = begPos;
     this->begPos = begPos;
 	this->damping = damping;
+    this->scale = scale;
 	this->mass = mass;
     this->stiffness = stiffness;	
     this->sphere = sphere;
@@ -68,13 +68,11 @@ void ObjSprSys::genParticlesNSprings()
     in >> dim; // Dimension of frame x y z   
     getline(in, line); // Discard rest of line
     
-    double scale = .1;
     double os = -0.5*scale; // origin shift
-    double d = 1.0 / dim * scale; // diameter
-    double r = d / 2; // radius
-    double m = mass / (dim * dim * dim); // Incorrect, but it shall work for now
-
-    vector<shared_ptr<Particle> > frame; // 3D vector for holding particle structure
+    double d = 1.0 / dim * scale; // particle diameter
+    double r = d / 2; // particle radius
+    double m = mass / (dim * dim * dim); // Particle mass    
+                                                vector<shared_ptr<Particle> > frame; // 3D vector for holding particle structure
     frame.assign(dim*dim*dim, NULL); // Initialize all to null pointers 
 
     for (int k = 0; k < dim; k++) {
@@ -85,8 +83,7 @@ void ObjSprSys::genParticlesNSprings()
                     Vector3d x;
                     x << (i+1)*d-r + os, (j+1)*d-r + os, (k+1)*d-r + os;
                     x += begPos;
-                    auto p = make_shared<Particle>(sphere, x);
-                    p->r = r;
+                    auto p = make_shared<Particle>(sphere, r, x);
                     p->m = m;
                     p->i = n;
                     n += 3;
@@ -139,7 +136,8 @@ void ObjSprSys::reset()
 {
 	for(int k = 0; k < (int)particles.size(); ++k) {
 		particles[k]->reset();
-	}
+	} 
+    v.setZero();
 }
 
 void ObjSprSys::step(double h, const Vector3d &grav)
@@ -223,18 +221,19 @@ void ObjSprSys::step(double h, const Vector3d &grav)
 }
 
 
-void ObjSprSys::draw(shared_ptr<MatrixStack> MV, const shared_ptr<Program> p) const
+void ObjSprSys::drawParticles(shared_ptr<MatrixStack> MV, const shared_ptr<Program> p) const
 {
-    if (!drawSprings) {
         // Draw particles
-        for (unsigned int i = 0; i < particles.size(); i++) {
-            particles[i]->draw(MV, p);
-        }
-    } else {
-        // Draw sping system
-        for (unsigned int i = 0; i < springs.size(); i++) {
-            springs[i]->draw();
-        }
+    for (unsigned int i = 0; i < particles.size(); i++) {
+        particles[i]->draw(MV, p);
+    }
+}
+
+void ObjSprSys::drawSprings()
+{
+    // Draw spring system
+    for (unsigned int i = 0; i < springs.size(); i++) {
+        springs[i]->draw();
     }
 }
 
@@ -255,6 +254,14 @@ void ObjSprSys::makeSpring(int ndx, int x, int y, int z, int dim, int os, int on
      s[ondx*NS + gRef(-ofx, -ofy, -ofz)] = true;
      springs.push_back(createSpring(frame[ndx], frame[ondx], stiffness));
      genSprings(x+ofx, y+ofy, z+ofz, dim, frame, s);    
+}
+
+void ObjSprSys::colliding(shared_ptr<Particle> object)
+{
+    // Run through particles
+    for (unsigned int i = 0; i < particles.size(); i++) {
+        particles[i]->colliding(object);
+    }
 }
 
 void ObjSprSys::genSprings(int x, int y, int z, int dim, vector<shared_ptr<Particle> > &frame, vector<bool> &s) 
